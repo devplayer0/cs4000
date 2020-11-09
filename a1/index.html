@@ -25,6 +25,7 @@
   <body>
     <div id="app">
       <v-app>
+        <!-- Set the background dynamically based on whether it's raining or not -->
         <v-app-bar
           app
           prominent
@@ -48,9 +49,10 @@
               :loading="loading"
               :error-messages="error"
             >
-          </v-text-field>
+            </v-text-field>
           </v-toolbar-title>
         </v-app-bar>
+
         <v-main>
           <v-container v-if="info">
             <h2>5 day forecast for {{ info.city.name }}, {{ info.city.country }}</h2>
@@ -169,7 +171,7 @@
             },
           },
 
-          location: 'dublin, ie',
+          location: null,
           loading: false,
           error: null,
         },
@@ -202,6 +204,8 @@
             const values = this.location.split(',').map(l => l.trim());
             let path = values[0];
             if (values.length > 1) {
+              // Convert the user's input to the format the API expects (`country/city`)
+              // Assume any extra commas are part of the city...
               path = `${values[values.length-1]}/${values.slice(0, values.length-1)}`;
             }
 
@@ -222,6 +226,7 @@
         },
 
         created() {
+          // Debounce so that we only hit the API after the user stops typing
           this.emitLocation = _.debounce(this._emitLocation, 300);
         },
       });
