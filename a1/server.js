@@ -4,6 +4,11 @@ const express = require('express');
 const cors = require('cors');
 const { URLSearchParams } = require('url');
 
+// JavaScript's % operator is weird...
+function mod(n, m) {
+  return ((n % m) + m) % m;
+}
+
 const WEATHER_BASEURL = 'https://api.openweathermap.org/data/2.5';
 const THRESHOLD_FREEZING = -10;
 const THRESHOLD_COLD = 10;
@@ -52,16 +57,22 @@ async function lookupWeather(city, country) {
     },
   };
 
-  d.list.forEach((forecast, i) => {
-    // There are 8 3-hour forecasts in a day
-    const day = Math.floor(i / 8);
+  const today = new Date().getUTCDay();
+  d.list.forEach(forecast => {
+    if (forecast.weather.length != 1) {
+      throw 'Missing weather description from OpenWeather';
+    }
+
+    // Figure out which day this forecast is for (relative to today)
+    const day = mod(new Date(forecast.dt * 1000).getUTCDay() - today, 7);
+    if (day > 4) {
+      // Only return (up to) 5 days of forecasts
+      return;
+    }
     if (!data.forecasts[day]) {
       data.forecasts[day] = [];
     }
 
-    if (forecast.weather.length != 1) {
-      throw 'Missing weather description from OpenWeather';
-    }
     const f = {
       temperature: {
         // All Celsius since we chose `metric` units
