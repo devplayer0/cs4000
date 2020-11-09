@@ -5,6 +5,9 @@ const cors = require('cors');
 const { URLSearchParams } = require('url');
 
 const WEATHER_BASEURL = 'https://api.openweathermap.org/data/2.5';
+const THRESHOLD_FREEZING = -10;
+const THRESHOLD_COLD = 10;
+const THRESHOLD_HOT = 20;
 
 const PORT = process.env.PORT ?? 3000;
 const API_KEY = process.env.API_KEY;
@@ -40,6 +43,13 @@ async function lookupWeather(city, country) {
       sunset: d.city.sunset,
     },
     forecasts: [],
+    umbrella: false,
+    pack: {
+      freezing: false,
+      cold: false,
+      warm: false,
+      hot: false,
+    },
   };
 
   d.list.forEach((forecast, i) => {
@@ -52,7 +62,7 @@ async function lookupWeather(city, country) {
     if (forecast.weather.length != 1) {
       throw 'Missing weather description from OpenWeather';
     }
-    data.forecasts[day].push({
+    const f = {
       temperature: {
         // All Celsius since we chose `metric` units
         main: forecast.main.temp,
@@ -74,7 +84,14 @@ async function lookupWeather(city, country) {
       },
       // Millimetres
       rain: forecast.rain?.['3h'] ?? 0,
-    });
+    }
+
+    data.umbrella = data.umbrella || f.rain > 0;
+    data.pack.freezing = data.pack.freezing || f.temperature.main < THRESHOLD_FREEZING;
+    data.pack.cold = data.pack.cold || (f.temperature.main >= THRESHOLD_FREEZING && f.temperature.main < THRESHOLD_COLD);
+    data.pack.warm = data.pack.warm || (f.temperature.main >= THRESHOLD_COLD && f.temperature.main < THRESHOLD_HOT);
+    data.pack.hot = data.pack.hot || f.temperature.main >= THRESHOLD_HOT;
+    data.forecasts[day].push(f);
   });
 
   return data;
