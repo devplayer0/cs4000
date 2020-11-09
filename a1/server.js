@@ -9,6 +9,13 @@ function mod(n, m) {
   return ((n % m) + m) % m;
 }
 
+// async error handling helper
+function aw(fn) {
+  return function (req, res, next) {
+    fn(req, res, next).catch(next);
+  };
+}
+
 const WEATHER_BASEURL = 'https://api.openweathermap.org/data/2.5';
 const THRESHOLD_FREEZING = -10;
 const THRESHOLD_COLD = 10;
@@ -20,10 +27,6 @@ if (!API_KEY) {
   console.error('API key must be provided');
   process.exit(1);
 }
-
-const app = express();
-// Fix CORS errors when using development server to serve frontend
-app.use(cors());
 
 async function lookupWeather(city, country) {
   let params = new URLSearchParams({
@@ -48,8 +51,8 @@ async function lookupWeather(city, country) {
       sunset: d.city.sunset,
     },
     forecasts: [],
-    umbrella: false,
     pack: {
+      umbrella: false,
       freezing: false,
       cold: false,
       warm: false,
@@ -60,17 +63,22 @@ async function lookupWeather(city, country) {
   const today = new Date().getUTCDay();
   d.list.forEach(forecast => {
     if (forecast.weather.length != 1) {
-      throw 'Missing weather description from OpenWeather';
+      throw { message: 'Missing weather description from OpenWeather' };
     }
 
     // Figure out which day this forecast is for (relative to today)
-    const day = mod(new Date(forecast.dt * 1000).getUTCDay() - today, 7);
+    const date = new Date(forecast.dt * 1000);
+    const day = mod(date.getUTCDay() - today, 7);
     if (day > 4) {
       // Only return (up to) 5 days of forecasts
       return;
     }
     if (!data.forecasts[day]) {
-      data.forecasts[day] = [];
+      data.forecasts[day] = {
+        // Main should be the first on the current day (now) or 4 (12.00 - 15.00) for other days
+        main: day == 0 ? 0 : 4,
+        data: [],
+      };
     }
 
     const f = {
@@ -85,7 +93,7 @@ async function lookupWeather(city, country) {
       description: {
         name: forecast.weather[0].main,
         text: forecast.weather[0].description,
-        icon: `http://openweathermap.org/img/wn/${forecast.weather[0].icon}@2x.png`,
+        icon: `http://openweathermap.org/img/wn/${forecast.weather[0].icon}@4x.png`,
       },
       wind: {
         // Metres/second with `metric` units
@@ -95,24 +103,33 @@ async function lookupWeather(city, country) {
       },
       // Millimetres
       rain: forecast.rain?.['3h'] ?? 0,
+      hour: date.getUTCHours(),
     }
 
-    data.umbrella = data.umbrella || f.rain > 0;
+    data.pack.umbrella = data.pack.umbrella || f.rain > 0;
     data.pack.freezing = data.pack.freezing || f.temperature.main < THRESHOLD_FREEZING;
     data.pack.cold = data.pack.cold || (f.temperature.main >= THRESHOLD_FREEZING && f.temperature.main < THRESHOLD_COLD);
     data.pack.warm = data.pack.warm || (f.temperature.main >= THRESHOLD_COLD && f.temperature.main < THRESHOLD_HOT);
     data.pack.hot = data.pack.hot || f.temperature.main >= THRESHOLD_HOT;
-    data.forecasts[day].push(f);
+    data.forecasts[day].data.push(f);
   });
 
   return data;
 }
 
-app.get('/forecast/:country/:city', async (req, res) => {
+const app = express();
+// Fix CORS errors when using development server to serve frontend
+app.use(cors());
+
+app.get('/forecast/:country/:city', aw(async (req, res) => {
   const forecast = await lookupWeather(req.params.city, req.params.country);
   res.json(forecast);
+}));
+app.get('/forecast/:city', aw(async (req, res) => res.json(await lookupWeather(req.params.city))));
+
+app.use((err, req, res, next) => {
+  res.status(500).json(err);
 });
-app.get('/forecast/:city', async (req, res) => res.json(await lookupWeather(req.params.city)));
 
 app.listen(PORT, () => {
   console.log(`Listening on port ${PORT}`);
