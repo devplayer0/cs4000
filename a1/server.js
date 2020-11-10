@@ -93,7 +93,7 @@ async function lookupWeather(city, country) {
       description: {
         name: forecast.weather[0].main,
         text: forecast.weather[0].description,
-        icon: `http://openweathermap.org/img/wn/${forecast.weather[0].icon}@4x.png`,
+        icon: `https://openweathermap.org/img/wn/${forecast.weather[0].icon}@4x.png`,
       },
       wind: {
         // Metres/second with `metric` units
