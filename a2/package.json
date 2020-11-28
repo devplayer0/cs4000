@@ -9,7 +9,8 @@
   "dependencies": {
     "aws-sdk": "^2.799.0",
     "cors": "^2.8.5",
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "lodash": "^4.17.20"
   },
   "main": "server.js",
   "scripts": {
