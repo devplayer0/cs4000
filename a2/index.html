@@ -5,12 +5,12 @@
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+
     <title>Movies</title>
   </head>
   <body>
     <div id="app">
       <v-app>
-        <!-- Set the background dynamically based on whether it's raining or not -->
         <v-app-bar
           app
           dark
@@ -65,15 +65,11 @@
       </v-app>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/lodash@4.x/lodash.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue-async-computed@3.x/dist/vue-async-computed.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
     <!--
       Production versions of dependencies
-      <script src="https://cdn.jsdelivr.net/npm/lodash@4.x/lodash.min.js"></script>
       <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.min.js"></script>
-      <script src="https://cdn.jsdelivr.net/npm/vue-async-computed@3.x/dist/vue-async-computed.min.js"></script>
       <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.js"></script>
     -->
 
@@ -145,10 +141,6 @@
           error(err) {
             alert(err.message ? err.message : err.toString());
           }
-        },
-        asyncComputed: {
-          async info() {
-          },
         },
       });
     </script>
