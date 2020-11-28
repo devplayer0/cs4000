@@ -27,8 +27,9 @@ aws.config.update({
   region: 'eu-west-1'
 });
 
-const dynamodb = new aws.DynamoDB();
 const s3 = new aws.S3();
+const dynamodb = new aws.DynamoDB();
+const docClient = new aws.DynamoDB.DocumentClient();
 
 async function getBucketJSON(params) {
   const res = await s3.getObject(params).promise();
@@ -49,6 +50,10 @@ function createTable() {
     BillingMode: 'PAY_PER_REQUEST',
   }).promise();
 }
+function deleteTable() {
+  return dynamodb.deleteTable({ TableName: MOVIES_TABLE }).promise();
+}
+
 async function insertMovies(movies) {
   const chunked = _.chunk(movies, 25);
 
@@ -78,17 +83,44 @@ async function insertMovies(movies) {
   }
 }
 
+async function findMovies(year, title) {
+  const data = await docClient.query({
+    TableName: MOVIES_TABLE,
+    KeyConditionExpression: '#yr = :yyyy and begins_with(title, :titleStart)',
+    ExpressionAttributeNames: {
+        '#yr': 'year'
+    },
+    ExpressionAttributeValues: {
+        ':yyyy': parseInt(year),
+        ':titleStart': title
+    }
+  }).promise();
+
+  return data.Items;
+}
+
 const app = express();
 // Fix CORS errors when using development server to serve frontend
 app.use(cors());
 
-app.post('/create', aw(async (req, res) => {
+app.post('/movies', aw(async (req, res) => {
   const data = await getBucketJSON(MOVIES_OBJECT);
 
   await createTable();
   await sleep(15000);
 
   await insertMovies(data);
+  res.status(204).end();
+}));
+
+app.get('/movies/:year/:title', aw(async (req, res) => {
+  const results = await findMovies(req.params.year, req.params.title);
+  res.json(results);
+}));
+
+app.delete('/movies', aw(async (req, res) => {
+  await deleteTable();
+
   res.status(204).end();
 }));
 
