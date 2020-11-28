@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+    <title>Movies</title>
+  </head>
+  <body>
+    <div id="app">
+      <v-app>
+        <!-- Set the background dynamically based on whether it's raining or not -->
+        <v-app-bar
+          app
+          prominent
+          dark
+          :src="`./assets/img/${info?.pack.umbrella ? 'bg-rain' : 'bg'}.jpg`"
+        >
+          <v-app-bar-nav-icon>
+            <v-icon>mdi-white-balance-sunny</v-icon>
+          </v-app-bar-nav-icon>
+          <v-toolbar-title>
+            <v-text-field
+              outlined
+              prefix="Weather in"
+              placeholder="City, Country"
+              hide-details="auto"
+              autofocus
+              background-color="rgba(0, 0, 0, 0.3)"
+
+              :value="location"
+              @input="emitLocation"
+              :loading="loading"
+              :error-messages="error"
+            >
+            </v-text-field>
+          </v-toolbar-title>
+        </v-app-bar>
+
+        <v-main>
+          <v-container v-if="info">
+            <h2>5 day forecast for {{ info.city.name }}, {{ info.city.country }}</h2>
+            <v-row class="flex-nowrap" style="overflow-x: auto; margin-bottom: 30px;">
+              <v-col v-for="(fs, i) in info.forecasts" :key="i">
+                <v-card width="320">
+                  <v-card-title>{{ prettyDay(i) }}</v-card-title>
+                  <v-card-subtitle>{{ fs.data[fs.main].temperature.main.toFixed(1) }}&deg;C, {{ _.capitalize(fs.data[fs.main].description.text) }}</v-card-subtitle>
+                  <v-img class="" :src="fs.data[fs.main].description.icon" contain style="margin-bottom: -60px; margin-top: -50px;"></v-img>
+
+                  <v-card-title>Details</v-card-title>
+                  <v-card-text style="padding-bottom: 0;">
+                    <v-row align="center" justify="space-around">
+                      <v-icon>mdi-clock</v-icon>
+                      <v-icon>mdi-temperature-celsius</v-icon>
+                      <v-icon>mdi-weather-rainy</v-icon>
+                      <v-icon>mdi-weather-windy</v-icon>
+                    </v-row>
+                  </v-card-text>
+
+                  <v-virtual-scroll :items="fs.data" height="210" item-height="50">
+                    <template v-slot:default="{ item }">
+                      <v-list-item>
+                        <v-list-item-content>
+                          <v-list-item-subtitle>
+                            <v-row justify="space-around" style="text-align: center;">
+                              <v-col>{{ item.hour }}:00</v-col>
+                              <v-col>{{ item.temperature.main.toFixed(1) }}</v-col>
+                              <v-col>{{ item.rain }}mm</v-col>
+                              <v-col>{{ item.wind.speed.toFixed(1) }}m/s</v-col>
+                            </v-row>
+                          </v-list-item-subtitle>
+                        </v-list-item-content>
+                      </v-list-item>
+                    </template>
+                  </v-virtual-scroll>
+                </v-card>
+              </v-col>
+            </v-row>
+
+            <h2>Notices</h2>
+            <v-row class="flex-nowrap" style="overflow-x: auto;">
+              <v-col class="flex-grow-0" v-if="info.pack[k]" v-for="(n, k) in notices" :key="k">
+                <v-card width="250">
+                  <v-row style="padding-top: 10px;" justify="space-around">
+                    <v-icon color="orange" size="150">mdi-{{ n.icon }}</v-icon>
+                  </v-row>
+                  <v-card-text>{{ n.text }}</v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-container>
+
+          <v-container
+            v-else
+            fill-height
+            fluid
+          >
+            <v-row align="center" justify="center">
+              <v-col>
+                <h1 id="blank-warning" class="grey--text" style="text-align: center;">Enter a location to begin!</h1>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-main>
+      </v-app>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.x/lodash.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-async-computed@3.x/dist/vue-async-computed.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <!--
+      Production versions of dependencies
+      <script src="https://cdn.jsdelivr.net/npm/lodash@4.x/lodash.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/vue-async-computed@3.x/dist/vue-async-computed.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.js"></script>
+    -->
+
+    <script>
+      const BASE_URL = 'http://localhost:3000';
+      const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+      // JavaScript's % operator is weird...
+      function mod(n, m) {
+        return ((n % m) + m) % m;
+      }
+    </script>
+    <script>
+      new Vue({
+        el: '#app',
+        vuetify: new Vuetify(),
+
+        data: {
+          notices: {
+            umbrella: {
+              icon: 'umbrella',
+              text: "It's going to rain, bring an umbrella!",
+            },
+            freezing: {
+              icon: 'snowflake-alert',
+              text: "It's gonna be freeeeeezing, stay inside!",
+            },
+            cold: {
+              icon: 'thermometer-low',
+              text: "It's going to be cold, bring a coat!",
+            },
+            warm: {
+              icon: 'thermometer',
+              text: "It's going to be warm, might be able to wear just a t-shirt!",
+            },
+            hot: {
+              icon: 'thermometer-high',
+              text: "It's gonna be hooot, pack your shorts!",
+            },
+          },
+
+          location: null,
+          loading: false,
+          error: null,
+        },
+        methods: {
+          prettyDay(day) {
+            switch (day) {
+              case 0:
+                return 'Today';
+              case 1:
+                return 'Tomorrow';
+              default:
+                // Day of week is today + the offset from today (index into array)
+                const dayOfWeek = mod(new Date().getUTCDate() + day, 7);
+                return DAYS[dayOfWeek];
+            }
+          },
+          _emitLocation(location) {
+            this.location = location;
+          },
+        },
+        asyncComputed: {
+          async info() {
+            if (!this.location) {
+              return null;
+            }
+
+            this.error = null;
+            this.loading = true;
+
+            const values = this.location.split(',').map(l => l.trim());
+            let path = values[0];
+            if (values.length > 1) {
+              // Convert the user's input to the format the API expects (`country/city`)
+              // Assume any extra commas are part of the city...
+              path = `${values[values.length-1]}/${values.slice(0, values.length-1)}`;
+            }
+
+            try {
+              let res = await fetch(`${BASE_URL}/forecast/${path}`);
+              let data = await res.json();
+              if (!res.ok) {
+                throw data;
+              }
+
+              return data;
+            } catch (err) {
+              this.error = err.message ? err.message : err.toString();
+            } finally {
+              this.loading = false;
+            }
+          },
+        },
+
+        created() {
+          // Debounce so that we only hit the API after the user stops typing
+          this.emitLocation = _.debounce(this._emitLocation, 300);
+        },
+      });
+    </script>
+  </body>
+</html>

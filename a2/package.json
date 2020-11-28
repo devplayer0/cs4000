@@ -1,0 +1,21 @@
+{
+  "name": "a2",
+  "version": "0.1.0",
+  "description": "CSU44000 Internet Applications assignment 2",
+  "repository": "https://github.com/devplayer0/cs4000",
+  "author": "Jack O'Sullivan",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "aws-sdk": "^2.799.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1"
+  },
+  "main": "server.js",
+  "scripts": {
+    "watch": "nodemon server.js"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.6"
+  }
+}
