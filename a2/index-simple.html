@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Movies</title>
+  </head>
+  <body>
+    <div id="app">
+      <form>
+        <label>Year</label>
+        <input type="text" v-model="year"></input>
+        <label>Title</label>
+        <input type="text" v-model="title"></input>
+      </form>
+
+      <button @click="tableAction('create')">Create</button>
+      <button @click="tableAction('delete')">Delete</button>
+      <button @click="query(year, title)">Query</button>
+
+      <table>
+        <tr>
+          <th>Year</th>
+          <th>Title</th>
+          <th>Plot</th>
+        </tr>
+
+        <tr v-for="movie in movies">
+          <td>{{ movie.year }}</td>
+          <td>{{ movie.title }}</td>
+          <td>{{ movie.plot }}</td>
+        </tr>
+      </table>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+
+    <script>
+      const BASE_URL = 'http://localhost:3000';
+    </script>
+    <script>
+      new Vue({
+        el: '#app',
+        data: {
+          year: '',
+          title: '',
+          movies: [],
+        },
+        methods: {
+          async tableAction(action) {
+            await fetch(`${BASE_URL}/movies`, {
+              method: action == 'delete' ? 'DELETE' : 'POST'
+            });
+          },
+          async query(year, title) {
+            const res = await fetch(`${BASE_URL}/movies/${year}/${title}`);
+            this.movies = await res.json();
+          }
+        },
+      });
+    </script>
+  </body>
+</html>

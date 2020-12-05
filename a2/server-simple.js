@@ -1,22 +1,6 @@
-#!/usr/bin/env node
-const _ = require('lodash');
 const express = require('express');
-const cors = require('cors');
 const aws = require ('aws-sdk');
 
-// why doesn't this just exist...
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// async error handling helper
-function aw(fn) {
-  return function (req, res, next) {
-    fn(req, res, next).catch(next);
-  };
-}
-
-const PORT = process.env.PORT ?? 3000;
 const MOVIES_OBJECT = {
   Bucket: 'csu44000assignment220',
   Key: 'moviedata.json',
@@ -55,32 +39,16 @@ function deleteTable() {
 }
 
 async function insertMovies(movies) {
-  const chunked = _.chunk(movies, 25);
-
-  for (let chunk of chunked) {
-    const items = _.map(chunk, movie => ({
-      PutRequest: {
-        Item: {
-          year: {
-            N: '' + movie.year,
-          },
-          title: {
-            S: movie.title
-          },
-          plot: {
-            S: movie.info?.plot ?? 'No plot provided.'
-          },
-        }
+  movies.forEach(async movie => {
+    await docClient.put({
+      TableName: MOVIES_TABLE,
+      Item: {
+        year: movie.year,
+        title: movie.title,
+        plot: movie.info?.plot ?? 'No plot provided.',
       }
-    }));
-
-    const req = {
-      RequestItems: {
-        [MOVIES_TABLE]: items
-      }
-    };
-    await dynamodb.batchWriteItem(req).promise();
-  }
+    });
+  });
 }
 
 async function findMovies(year, title) {
@@ -100,37 +68,26 @@ async function findMovies(year, title) {
 }
 
 const app = express();
-// Fix CORS errors when using development server to serve frontend
-app.use(cors());
 
-app.post('/movies', aw(async (req, res) => {
+app.post('/movies', async (req, res) => {
   const data = await getBucketJSON(MOVIES_OBJECT);
-
   await createTable();
-  // The API can return before the table is actually ready!
-  await dynamodb.waitFor("tableExists", { TableName: MOVIES_TABLE }).promise();
-
   await insertMovies(data);
-  res.status(204).end();
-}));
-
-app.get('/movies/:year/:title', aw(async (req, res) => {
-  const results = await findMovies(req.params.year, req.params.title);
-  res.json(results);
-}));
-
-app.delete('/movies', aw(async (req, res) => {
-  await deleteTable();
-  // The API can return before the table is actually gone!
-  await dynamodb.waitFor("tableNotExists", { TableName: MOVIES_TABLE }).promise();
 
   res.status(204).end();
-}));
-
-app.use((err, req, res, next) => {
-  res.status(500).json(err);
 });
 
-app.listen(PORT, () => {
-  console.log(`Listening on port ${PORT}`);
+app.get('/movies/:year/:title', async (req, res) => {
+  const results = await findMovies(req.params.year, req.params.title);
+  res.json(results);
+});
+
+app.delete('/movies', async (req, res) => {
+  await deleteTable();
+
+  res.status(204).end();
+});
+
+app.listen(3000, () => {
+  console.log('Listening on port 3000');
 });
